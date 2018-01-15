@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>canvas Model</title>
+</head>
+<style type="text/css">
+	body{margin:0px;padding:0px;}
+</style>
+<body>
+<canvas id="canvas"></canvas>
+<script src="header.js"></script>
+<script src="utils.js"></script>
+<script src="ball.js"></script>
+<script src="arrow.js"></script>
+<script src="ship.js"></script>
+<script src="tweenjs.js"></script>
+<script src="box.js"></script>
+<script src="line.js"></script>
+<script type="text/javascript">
+	var context,balls=[];
+	window.addEventListener("load",function (){
+		canvas=document.getElementById("canvas");
+		canvas.height=phoneheight;
+		canvas.width=phonewidth;
+		context=canvas.getContext('2d');
+		var mouse=utils.captureMouse(canvas);
+		
+		var ball0=new Ball(20),
+		ball1=new Ball(20),
+		ball2=new Ball(20),
+		ball3=new Ball(20),
+		ball4=new Ball(20),
+		bounce=-1.0;
+		
+		//设置球体的质量，位置，动量
+		ball0.mass=2;
+		ball0.x=canvas.width/2;
+		ball0.y=canvas.height/2;
+		ball0.vx=0//Math.random()*10-5;
+		ball0.vy=0//Math.random()*10-5;
+		ball1.mass=2;
+		ball1.x=canvas.width/2;
+		ball1.y=Math.random()*canvas.height;
+		ball1.vx=Math.random()*10-5;
+		ball1.vy=Math.random()*10-5;
+		ball2.mass=2;
+		ball2.x=canvas.width/2;
+		ball2.y=Math.random()*canvas.height;
+		ball2.vx=Math.random()*10-5;
+		ball2.vy=Math.random()*10-5;
+		ball3.mass=2;
+		ball3.x=canvas.width/2;
+		ball3.y=Math.random()*canvas.height;
+		ball3.vx=Math.random()*10-5;
+		ball3.vy=Math.random()*10-5;
+		ball4.mass=2;
+		ball4.x=canvas.width/2;
+		ball4.y=Math.random()*canvas.height;
+		ball4.vx=Math.random()*10-5;
+		ball4.vy=Math.random()*10-5;
+		
+		balls.push(ball0);
+		balls.push(ball1);
+		balls.push(ball2);
+		balls.push(ball3);
+		balls.push(ball4);
+		
+		canvas.addEventListener('mousedown', function(){
+			if(utils.containsPoint(ball0.getBounds(),mouse.x,mouse.y)){
+				canvas.addEventListener('mouseup', onMouseUp, false);
+				canvas.addEventListener('mousemove', onMouseMove, false);
+			}
+		},false);
+		function onMouseUp(){
+			canvas.removeEventListener('mouseup', onMouseUp, false);
+			canvas.removeEventListener('mousemove', onMouseMove, false);
+		}
+		function onMouseMove(event){
+			ball0.x=mouse.x;
+			ball0.y=mouse.y;
+			
+		}
+		
+		
+		function rotate(x,y,sin,cos,reverse){
+			return {
+				x:(reverse)?(x*cos+y*sin):(x*cos-y*sin),
+				y:(reverse)?(y*cos-x*sin):(y*cos+x*sin)
+			};
+		}
+		
+		function checkCollision(ball0,ball1){
+			//基于距离检测碰撞的函数
+			var dx=ball1.x-ball0.x,
+			dy=ball1.y-ball0.y,
+			dist=Math.sqrt(dx*dx+dy*dy);
+			
+			if(dist<ball0.radius+ball1.radius){
+					//两球之间的角度
+					var angle=Math.atan2(dy,dx),
+					sin=Math.sin(angle),
+					cos=Math.cos(angle),
+					
+					//ball0的位置
+					pos0={x:0,y:0},
+					
+					//ball1的位置
+					pos1=rotate(dx,dy,sin,cos,true),
+					
+					//ball0的速度
+					vel0=rotate(ball0.vx,ball0.vy,sin,cos,true),
+					
+					//bal1的速度
+					vel1=rotate(ball1.vx,ball1.vy,sin,cos,true),
+					
+					//碰撞反应
+					vxTotal=vel0.x-vel1.x;
+					vel0.x=((ball0.mass-ball1.mass)*vel0.x+2*ball1.mass*vel1.x)/(ball0.mass+ball1.mass);
+					vel1.x=vxTotal-vel0.x;
+					
+					//更新位置
+					pos0.x+=vel0.x;
+					pos1.x+=vel1.x;
+					
+					//旋转位置
+					var pos0F=rotate(pos0.x,pos0.y,sin,cos,false),
+					pos1F=rotate(pos1.x,pos1.y,sin,cos,false);
+					
+					//调整位置到实际位置(ball0.x和ball0.y是碰撞的点)
+					ball1.x=ball0.x+pos1F.x;
+					ball1.y=ball0.y+pos1F.y;
+					ball0.x=ball0.x+pos0F.x;
+					ball0.y=ball0.y+pos0F.y;
+					
+					//旋转速度
+					var vel0F=rotate(vel0.x,vel0.y,sin,cos,false),
+					vel1F=rotate(vel1.x,vel1.y,sin,cos,false);
+					ball0.vx=vel0F.x*0.5;
+					ball0.vy=vel0F.y*0.5;
+					ball1.vx=vel1F.x*0.5;
+					ball1.vy=vel1F.y*0.5;
+			}
+		}
+		
+		//判断是否碰撞屏幕边缘
+		function checkWalls(ball){
+			if(ball.x + ball.radius > canvas.width){
+				ball.x = canvas.width-ball.radius;
+				ball.vx*=bounce;
+			}else if(ball.x - ball.radius <0){
+				ball.x=ball.radius;
+				ball.vx*=bounce;
+			}
+			if(ball.y + ball.radius>canvas.height){
+				ball.y= canvas.height-ball.radius;
+				ball.vy*=bounce;
+			}else if(ball.y-ball.radius<0){
+				ball.y=ball.radius;
+				ball.vy*=bounce;
+			}
+		}
+		function draw(ball){
+			ball.draw(context);
+		}
+		(function drawFrame(){
+			window.requestAnimationFrame(drawFrame,canvas);
+			context.clearRect(0,0,canvas.width,canvas.height);
+			
+			//移动位置x，y轴
+			ball0.x=mouse.x;
+			ball0.y=mouse.y;
+			for(var n=1;n<balls.length;n++){
+				balls[n].x+=balls[n].vx;
+				balls[n].y+=balls[n].vy;
+			}
+			//checkCollision(ball0,ball1);
+			for(var ballA,i=0,len=balls.length-1;i<len;i++){
+				ballA=balls[i];
+				for(var ballB,j=i+1;j<balls.length;j++){
+					ballB=balls[j];
+					checkCollision(ballA,ballB);
+				}
+			}
+			balls.forEach(checkWalls);
+			balls.forEach(draw);
+		}());
+	});
+</script>
+</body>
+</html>
